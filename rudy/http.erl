@@ -1,5 +1,5 @@
 -module(http).
--export([parse_request/1]).
+-export([parse_request/1, ok/1, get/1]).
 
 parse_request(R0) ->
     {Request, R1} = request_line(R0),
@@ -7,7 +7,6 @@ parse_request(R0) ->
     {Body, _} = request_body(R2),
     {Request, Headers, Body}.
 
-% only GET requests for now
 request_line([$G, $E, $T, 32 | R0]) ->
     {URI, R1} = request_uri(R0),
     {Ver, R2} = http_version(R1),
@@ -20,7 +19,6 @@ request_uri([C | R0]) ->
     {Rest, R1} = request_uri(R0),
     {[C | Rest], R1}.
 
-% only http v1.1 and v1.0 for now
 http_version([$H, $T, $T, $P, $/, $1, $., $1 | R0]) ->
     {v11, R0};
 http_version([$H, $T, $T, $P, $/, $1, $., $0 | R0]) ->
