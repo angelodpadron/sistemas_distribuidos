@@ -1,21 +1,17 @@
-name: Mirror to GitLab
+name: Mirror to Gitlab
 
-on:
-  push:
-    branches:
-      - main
+on: [push, delete]
 
 jobs:
-  mirror:
+  to_gitlab:
     runs-on: ubuntu-latest
-    steps:
-      - name: Mirror to GitLab
-        uses: appleboy/git-action@master
+    steps:                                              
+      - uses: actions/checkout@v3
         with:
-          repository: 'git@gitlab.com:angelodpadron/sistemas_distribuidos.git'
-          token: ${{ secrets.GITLAB_PK }}
-          source_branch: 'main'
-          target_branch: 'main'
-          mirror_args: "--mirror"
-        env:
-          GIT_SSH_COMMAND: 'ssh -o StrictHostKeyChecking=no'
+          fetch-depth: 0
+      - uses: pixta-dev/repository-mirroring-action@v1
+        with:
+          target_repo_url:
+            git@gitlab.com:angelodpadron/sistemas_distribuidos.git
+          ssh_private_key:                              
+            ${{ secrets.GITLAB_PK }}
