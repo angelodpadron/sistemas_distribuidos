@@ -1,0 +1,21 @@
+name: Mirror to GitLab
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mirror to GitLab
+        uses: appleboy/git-action@master
+        with:
+          repository: 'git@gitlab.com:angelodpadron/sistemas_distribuidos.git'
+          token: ${{ secrets.GITLAB_PK }}
+          source_branch: 'main'
+          target_branch: 'main'
+          mirror_args: "--mirror"
+        env:
+          GIT_SSH_COMMAND: 'ssh -o StrictHostKeyChecking=no'
