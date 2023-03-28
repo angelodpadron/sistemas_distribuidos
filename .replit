@@ -1,0 +1,19 @@
+compile = ["erlc", "main.erl"]
+
+run = ["erl", "-noshell", "-s", "main", "start", "-s", "init", "stop"]
+
+hidden = ["**/*.beam"]
+
+entrypoint = "main.erl"
+
+[nix]
+channel = "stable-22_11"
+
+# Disabled for now, erlang_ls starts a server
+# https://github.com/erlang-ls/erlang_ls/issues/1416
+# [languages]
+# [languages.erlang]
+# pattern = "**/{*.erl,*.hrl}"
+
+# [languages.erlang.languageServer]
+# start = "erlang_ls --log-level error --transport stdio"

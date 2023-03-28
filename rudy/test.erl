@@ -5,7 +5,7 @@ bench(Host, Port) ->
     Start = erlang:system_time(micro_seconds),
     run(100, Host, Port),
     Finish = erlang:system_time(micro_seconds),
-    Finish - Start.
+    io:format("Bench results: ~w ms. ~n", [(Finish - Start) / 1000]).
 
 run(N, Host, Port) ->
     if
@@ -18,7 +18,9 @@ run(N, Host, Port) ->
 
 request(Host, Port) ->
     Opt = [list, {active, false}, {reuseaddr, true}],
+    io:format("Sending request to ~w:~B...~n", [Host, Port]),
     {ok, Server} = gen_tcp:connect(Host, Port, Opt),
+    io:format("OK~n"),
     gen_tcp:send(Server, http:get("foo")),
     Recv = gen_tcp:recv(Server, 0),
     case Recv of
