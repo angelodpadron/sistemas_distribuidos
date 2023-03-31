@@ -1,32 +1,32 @@
 -module(test).
--export([bench/2]).
+-export([bench/2, request/3]).
 
 bench(Host, Port) ->
-    Start = erlang:system_time(micro_seconds),
-    run(100, Host, Port),
-    Finish = erlang:system_time(micro_seconds),
-    io:format("Bench results: ~w ms. ~n", [(Finish - Start) / 1000]).
+    {ok, TotalTime} = run(100, Host, Port, 0),
+    io:format("~nAverage requests completion time: ~w ms. ~n", [TotalTime / 1000 / 100]),
+    io:format("Total requests completion time: ~w ms. ~n", [TotalTime / 1000]).
 
-run(N, Host, Port) ->
-    if
-        N == 0 ->
-            ok;
-        true ->
-            request(Host, Port),
-            run(N-1, Host, Port)
+run(0, _, _, Acc) ->
+    {ok, Acc};
+run(N, Host, Port, Acc) ->
+    spawn(test, request, [Host, Port, self()]),
+    receive
+        {time, Time} ->
+            io:format("Request took ~w ms to complete.~n", [Time / 1000]),
+            run(N - 1, Host, Port, Acc + Time)
     end.
 
-request(Host, Port) ->
+request(Host, Port, PID) ->
     Opt = [list, {active, false}, {reuseaddr, true}],
-    io:format("Sending request to ~w:~B...~n", [Host, Port]),
+    Start = erlang:system_time(micro_seconds),
     {ok, Server} = gen_tcp:connect(Host, Port, Opt),
-    io:format("OK~n"),
     gen_tcp:send(Server, http:get("foo")),
-    Recv = gen_tcp:recv(Server, 0),
-    case Recv of
+    case gen_tcp:recv(Server, 0) of
         {ok, _} ->
             ok;
         {error, Error} ->
             io:format("test: error: ~w~n", [Error])
     end,
-    gen_tcp:close(Server).
+    gen_tcp:close(Server),
+    Finish = erlang:system_time(micro_seconds),
+    PID ! {time, Finish - Start}.
