@@ -13,15 +13,25 @@ validator() ->
     {validate, Ref, Reads, Writes, Client} ->
       case validate(Reads) of
         ok ->
-          % update(Writes), 
+          update(Writes), 
           Client ! {Ref, ok};
         abort ->
           Client ! {Ref, abort}
-      end,
+        end,
       validator();
     _Old ->
       validator()
+    end.
+
+update(Writes) ->
+  case Writes of
+    [] ->
+      ok;
+    [{_, Entry, Value} | Rest] ->
+      Entry ! {write, Value},
+      update(Rest)
   end.
+
 
 validate(Reads) ->
   {N, Tag} = send_checks(Reads),

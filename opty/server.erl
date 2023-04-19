@@ -17,9 +17,11 @@ init(N) ->
 server(Validator, Store) ->
   receive
     {open, Client} ->
+      io:format("Open: ~p~n", [Client]),
       Client ! {Validator, Store},
       server(Validator, Store);
     stop ->
+      io:format("Stopping server~n", []),
       store:stop(Store)
   end.
 
