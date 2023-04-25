@@ -9,17 +9,13 @@ init(Client, Validator, Store) ->
   handler(Client, Validator, Store, [], []).
 
 handler(Client, Validator, Store, Reads, Writes) ->
-  io:format("Handler reads: ~p~n", [Reads]),
-  io:format("Handler writes: ~p~n", [Writes]),
   receive
     {read, Ref, N} ->
       case lists:keysearch(N, 1, Writes) of
         {value, {N, _, Value}} ->
-          io:format("Value loaded from writes: ~p~n", [Value]),
           Client ! {value, Ref, Value},
           handler(Client, Validator, Store, Reads, Writes);
         false ->
-          io:format("Value loaded from store~n", []),
           Entry = store:lookup(N, Store),
           Entry ! {read, Ref, self()},
           handler(Client, Validator, Store, Reads, Writes)
