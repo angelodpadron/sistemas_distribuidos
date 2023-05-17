@@ -15,6 +15,7 @@ init(Name, Lock, Seed, Sleep, Work) ->
     terminate(Name, Taken).
 
 worker(Name, Lock, Taken, Sleep, Work, Gui) ->
+    Gui ! sleeping,
     Wait = random:uniform(Sleep),
     receive
         stop ->

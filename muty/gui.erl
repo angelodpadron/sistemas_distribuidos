@@ -17,6 +17,10 @@ init(Name) ->
 
 loop(Frame) ->
     receive
+        sleeping ->
+            wxFrame:setBackgroundColour(Frame, ?wxGREEN),
+            wxFrame:refresh(Frame),
+            loop(Frame);
         waiting ->
             wxFrame:setBackgroundColour(Frame, {255, 255, 0}),
             wxFrame:refresh(Frame),

@@ -1,3 +1,5 @@
+% lock that only complies with safety
+
 -module(lock1).
 
 -export([start/1]).
