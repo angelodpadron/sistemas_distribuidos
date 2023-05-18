@@ -1,5 +1,3 @@
-% lock that complies with safety, liveness and ordering
-
 -module(lock3).
 
 -export([start/1]).
@@ -7,66 +5,70 @@
 start(Id) ->
     spawn(fun() -> init(Id) end).
 
-init(Id) ->
+init(Priority) ->
     receive
         {peers, Peers} ->
-            open(Peers, Id);
+            InitialTime = time:zero(),
+            open(Peers, Priority, InitialTime);
         stop ->
             ok
     end.
 
-open(Nodes, Id) ->
+open(Nodes, Priority, Time) ->
     receive
         {take, Master} ->
-            Refs = requests(Nodes, Id),
-            wait(Nodes, Master, Refs, [], Id);
-        {requests, From, Ref, _} ->
+            NewTime = time:inc(Time),
+            Refs = requests(Nodes, Priority, NewTime),
+            wait(Nodes, Priority, Master, Refs, [], NewTime);
+        {request, From, _, Ref, MsgTime} ->
+            NewTime = time:merge(Time, MsgTime),
             From ! {ok, Ref},
-            open(Nodes, Id);
+            open(Nodes, Priority, NewTime);
         stop ->
             ok
     end.
 
-requests(Nodes, Id) ->
+requests(Nodes, Priority, Time) ->
     lists:map(fun(P) ->
                  R = make_ref(),
-                 P ! {request, self(), R, Id},
+                 P ! {request, self(), Priority, R, Time},
                  R
               end,
               Nodes).
 
-wait(Nodes, Master, [], Waiting, Id) ->
+wait(Nodes, Priority, Master, [], Waiting, Time) ->
     Master ! taken,
-    held(Nodes, Waiting, Id);
-wait(Nodes, Master, Refs, Waiting, Id) ->
+    held(Nodes, Priority, Waiting, Time);
+wait(Nodes, Priority, Master, Refs, Waiting, Time) ->
     receive
-        {request, From, Ref, LockId} ->
-            
-            if
-                Id < LockId ->
-                    wait(Nodes, Master, Refs, [{From, Ref} | Waiting], Id);   
-                true ->
-                    From ! {ok, Ref},
-                    wait(Nodes, Master, Refs, Waiting, Id)
+        {request, From, FromPriority, Ref, MsgTime} ->
+            MsgTimeLower = time:leq(MsgTime, Time),
+            EqualTimes = time:eq(MsgTime, Time),
+            if MsgTimeLower or (EqualTimes and (FromPriority < Priority)) ->
+                   From ! {ok, Ref},
+                   R = make_ref(),
+                   From ! {request, self(), Priority, R, Time},
+                   wait(Nodes, Priority, Master, [R | Refs], Waiting, Time);
+               true ->
+                   wait(Nodes, Priority, Master, Refs, [{From, Ref} | Waiting], Time)
             end;
-
         {ok, Ref} ->
             Refs2 = lists:delete(Ref, Refs),
-            wait(Nodes, Master, Refs2, Waiting, Id);
+            wait(Nodes, Priority, Master, Refs2, Waiting, Time);
         release ->
-            broadcast_ok(Waiting),
-            open(Nodes, Id)
+            ok(Waiting),
+            open(Nodes, Priority, Time)
     end.
 
-
-broadcast_ok(Waiting) ->
+ok(Waiting) ->
     lists:foreach(fun({F, R}) -> F ! {ok, R} end, Waiting).
 
-held(Nodes, Waiting, Id) ->
+held(Nodes, Priority, Waiting, Time) ->
     receive
-        {request, From, Ref, _} ->            
-            held(Nodes, [{From, Ref} | Waiting], Id);
+        {request, From, Priority, Ref, MsgTime} ->
+            NewTime = time:merge(Time, MsgTime),
+            held(Nodes, Priority, [{From, Ref} | Waiting], NewTime);
         release ->
-            broadcast_ok(Waiting),
-            open(Nodes, Id)
+            ok(Waiting),
+            open(Nodes, Priority, Time)
     end.
