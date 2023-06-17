@@ -1,9 +1,9 @@
 -module(toty).
 
 % - export([start/3, testMethods/0]).
--export([start/3]).
+-export([start/4]).
 
-start(MulticastModule, Sleep, Jitter) ->
+start(MulticastModule, Sleep, Jitter, ClientCount) ->
   case MulticastModule of
     multicast_b ->
       io:format("Toty will run with basic multicast.~n", []);
@@ -11,26 +11,20 @@ start(MulticastModule, Sleep, Jitter) ->
       io:format("Toty will run with total ordering multicast.~n", [])
   end,
 
-  Pid = spawn(fun() -> init(MulticastModule, Sleep, Jitter) end),
+  Pid = spawn(fun() -> init(MulticastModule, Sleep, Jitter, ClientCount) end),
   register(toty, Pid).
 
-init(MulticastModule, Sleep, Jitter) ->
+init(MulticastModule, Sleep, Jitter, ClientCount) ->
   Manager = manager:start(MulticastModule),
 
-  Client1 = worker:start("John", Manager, Sleep, Jitter),
-  Client2 = worker:start("Joe", Manager, Sleep, Jitter),
-  Client3 = worker:start("Michael", Manager, Sleep, Jitter),
-  Client4 = worker:start("Dani", Manager, Sleep, Jitter),
-  Client5 = worker:start("Zoe", Manager, Sleep, Jitter),
-
+  Clients =
+    lists:map(fun(Id) ->
+                 worker:start("Client" ++ io_lib:format("~B", [Id]), Manager, Sleep, Jitter)
+              end,
+              lists:seq(1, ClientCount)),
   receive
     stop ->
-      io:format("Stopping clients"),
-      Client1 ! stop,
-      Client2 ! stop,
-      Client3 ! stop,
-      Client4 ! stop,
-      Client5 ! stop,
+      lists:foreach(fun(Client) -> Client ! stop end, Clients),
       ok
   end.
 
