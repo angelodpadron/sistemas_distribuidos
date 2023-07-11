@@ -1,0 +1,3 @@
+shoutcast server
+http://str45.streamakaci.com:8014/
+http://www.bassdrive.com:8000/
