@@ -2,7 +2,7 @@
 
 -export([init/1]).
 
--define(Timeout, 15000).
+-define(Timeout, 10000).
 
 init(Cast) ->
     io:format("proxy: started~n"),
@@ -21,7 +21,6 @@ init(Cast) ->
     end.
 
 loop(Cont, N, Stream, Client, Ref) ->
-    io:format("proxy: loop~n", []),
     case reader(Cont, Stream, Ref) of
         {ok, Data, Rest} ->
             Client ! {data, N, Data},
@@ -52,19 +51,19 @@ attach({cast, Host, Port, Feed}, Ref) ->
     end.
 
 send_request(Host, Feed, Stream) ->
-    icy:send_request(Host, Feed, fun(Bin) -> gen_tcp:send(Stream, Bin) end). % Stream no tiene ligadura aca, un error del pdf o lei mal?
+    icy:send_request(Host, Feed, fun(Bin) -> gen_tcp:send(Stream, Bin) end).
 
 reply(Stream, Ref) ->
-    reader(fun() -> parser:reply(<<>>) end, Stream, Ref).
+    % reader(fun() -> parser:reply(<<>>) end, Stream, Ref).
+    reader(fun() -> icy:reply(<<>>) end, Stream, Ref).
+
 reader(Cont, Stream, Ref) ->
     case Cont() of
         {ok, Parsed, Rest} ->
             {ok, Parsed, Rest};
         {more, Fun} ->
-            % io:format("proxy: awaiting data~n"),
             receive
                 {tcp, Stream, More} ->
-                    % io:format("proxy: received data~n"),
                     reader(fun() -> Fun(More) end, Stream, Ref);
                 {tcp_closed, Stream} ->
                     {error, "icy server closed connection"};

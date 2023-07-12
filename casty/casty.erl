@@ -1,31 +1,38 @@
 -module(casty).
 
--export([test/0]).
+-export([single_mode/0, dist_mode/0, dummy/0, just_proxy/0, just_client/2]).
 
-test() ->
-    % Socket = 8000,
-    % Sender = fun(Bin) -> io:format("Request:~n~s~n", [Bin]) end,
-    % icy:send_request("http://www.bassdrive.com", "/", Sender).
-    % Headers =
-    %     [{'icy-notice', "This stream requires Winamp .."},
-    %      {'icy-name', "Virgin Radio ..."},
-    %      {'icy-genre', "Adult Pop Rock"},
-    %      {'icy-url', "http://www.virginradio.co.uk/"},
-    %      {'content-type', "audio/mpeg"},
-    %      {'icy-pub', "1"},
-    %      {'icy-metaint', "8192"},
-    %      {'icy-br', "128"}],
-    % Sender = fun(Bin) -> io:format("Reply:~n~s~n", [Bin]) end,
-    % icy:send_reply(Headers, Sender).
-    % AudioAndMeta = {[], "hello"},
-    % Sender = fun(Bin) -> io:format("Data:~n~s~n", [Bin]) end,
-    % icy:send_data(AudioAndMeta, Sender).
-    % {K, Padded} = icy:padding("hello"),
-    % io:format("~p~n", [<<K/integer, Padded/binary>>]).
-    % RequestString = "GET / HTTP/1.0\r\nHost: mp3-vr-128.smgradio.com\r\nUser-Agent: Casty\r\nIcy-MetaData: 1\r\n\r\n",
-    % parser:request(list_to_binary(RequestString)).
-    
-    Port = 8080,
+single_mode() ->
+    io:format("casty: starting in single mode~n", []),
+    % Cast = {cast, "localhost", 4000, "/stream"},
     Cast = {cast, "str45.streamakaci.com", 8014, "/"},
+    Port = 8081,
     Proxy = spawn(fun() -> proxy:init(Cast) end),
     spawn(fun() -> client:init(Proxy, Port) end).
+
+dist_mode() ->
+    io:format("casty: starting in dist mode~n", []),
+    Cast = {cast, "str45.streamakaci.com", 8014, "/"},
+    Proxy = spawn(fun() -> proxy:init(Cast) end),
+    Dist = spawn(fun() -> dist:init(Proxy) end),
+    spawn(fun() -> client:init(Dist, 8080) end),
+    spawn(fun() -> client:init(Dist, 8081) end),
+    spawn(fun() -> client:init(Dist, 8082) end).
+
+dummy() ->
+    io:format("casty: starting in dummy mode~n", []),
+    Cast = {cast, "str45.streamakaci.com", 8014, "/"},
+    Proxy = spawn(fun() -> proxy:init(Cast) end),
+    Dist = spawn(fun() -> dist:init(Proxy) end),
+    lists:foreach(fun(_) -> spawn(fun() -> dummy:init(Dist) end) end, lists:seq(1, 50)).
+
+just_proxy() ->
+    io:format("casty: starting in just proxy mode~n", []),
+    Cast = {cast, "str45.streamakaci.com", 8014, "/"},
+    Proxy = spawn(fun() -> proxy:init(Cast) end),
+    global:register_name(proxy, Proxy).
+
+just_client(Proxy, Port) ->
+    io:format("casty: starting in just client mode~n", []),
+    spawn(fun() -> client:init(Proxy, Port) end),
+    global:register_name(client, self()).

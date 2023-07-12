@@ -3,7 +3,7 @@
 -export([init/2]).
 
 -define(Opt, [binary, {packet, 0}, {reuseaddr, true}, {active, true}, {nodelay, true}]).
--define(Timeout, 15000).
+-define(Timeout, 10000).
 
 init(Proxy, Port) ->
     io:format("client: started~n"),
@@ -37,8 +37,9 @@ init(Proxy, Port) ->
     end.
 
 read_request(Socket) ->
-    reader(fun() -> parser:request(<<>>) end,
-           Socket). % should be the icy module instead of parser
+    % reader(fun() -> parser:request(<<>>) end,
+    %        Socket).
+    reader(fun() -> icy:request(<<>>) end, Socket).
 
 loop(_, Socket) ->
     receive

@@ -2,7 +2,7 @@
 
 -module(icy).
 
--export([send_request/3, send_reply/2, send_data/2]).
+-export([send_request/3, send_reply/2, send_data/2, request/1, reply/1]).
 
 send_request(Host, Feed, Sender) ->
     Request =
@@ -48,3 +48,9 @@ padding(Meta) ->
     Binary = list_to_binary(Meta),
     Padded = <<Binary/binary, 0:(Padding)>>,
     {K, Padded}.
+
+request(Binary) ->
+    parser:request(Binary).
+
+reply(Binary) ->
+    parser:reply(Binary).
